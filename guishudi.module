@@ -1,0 +1,87 @@
+<?php
+
+/**
+ * Implements hook_menu()
+ * 添加归属地模块设置页面
+ * @return mixed
+ */
+function guishudi_menu() {
+    $items['admin/config/system/guishudi'] = array(
+        'title' => 'Guishudi Configuration',
+        'description' => 'Configure settings for Guishudi.',
+        'page callback' => 'drupal_get_form',
+        'page arguments'   => array('guishudi_settings'),
+        'access arguments' => array('administer guishudi module'),
+        'type' => MENU_NORMAL_ITEM,
+        'weight' => 50,
+        'file' => 'guishudi.admin.inc',
+    );
+    return $items;
+}
+
+/**
+ * Implements hook_permission().
+ * 归属地模块权限管理注册
+ * @return array
+ */
+function guishudi_permission() {
+    return array(
+        'administer guishudi module' => array(
+            'title' => t('Administer Guishudi module'),
+            'description' => t('Perform administration tasks for Guishudi module.'))
+    );
+}
+
+/**
+ * Implements hook_rules_action_info()
+ * 添加自定义动作
+ * @return array
+ */
+function guishudi_rules_action_info() {
+    return array(
+        'guishudi_rules_action_get_guishudi' => array(
+            'label' => t('Get phone attribution'),
+            'group' => t('Custom'),
+            'parameter' => array(
+                'phone' => array(
+                    'type' => 'text',
+                    'label' => t('Phone'),
+                    'description' => t('Enter the phone number')
+                )
+            ),
+            'provides' => array(
+                'attribution' => array(
+                    'type' => 'text',
+                    'label' => t('phone attribution'),
+                )
+            )
+        )
+    );
+}
+
+
+/**
+ * Add guishudi_rules_action_get_guishudi
+ * call remote api to get result;
+ * @param $phone
+ * @return array
+ */
+function guishudi_rules_action_get_guishudi($phone) {
+    $key = variable_get('guishudi_appkey');
+    $phone = trim($phone);
+
+    $url = "http://apis.juhe.cn/mobile/get?phone=".$phone."&key=".$key;
+
+    $return = file_get_contents($url);
+$json_data = drupal_json_decode($return);
+
+    if ($json_data['resultcode'] == 200) {
+        $attribution = $json_data['result']['province']. $json_data['result']['city'];
+    } else {
+        $attribution = variable_get('guishudi_default', t('unknown'));
+    }
+
+    return array(
+        'attribution' => $attribution
+    );
+}
